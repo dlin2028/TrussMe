@@ -56,20 +56,30 @@ namespace TrussMe
             List<Member> members = new List<Member>();
             if (archType == TrussType.Howe)
             {
+                float startX = supportWidth;
+                float startY = bitBox.Height;
+
                 float xOriginal = bitBox.Width / 2;
-                float yOriginal = (int)((scale * archHeight) - (xOriginal * xOriginal) / (archHeight * scale) / 2);
-                int radius = (int)Math.Sqrt(xOriginal * xOriginal + yOriginal * yOriginal);
+                float yOriginal = (int)(-(scale * archHeight) + (xOriginal * xOriginal) / (archHeight * scale) / 2);
+                int radius = (int)Math.Sqrt(Math.Pow(startX - xOriginal, 2) + Math.Pow(startY - yOriginal, 2));
 
                 Point lastPoint = new Point((int)(scale * 1.75f), bitBox.Height);
                 for (int i = 1; i < archWebs + 1; i++)
                 {
-                    int x = (int)(scale * 16.25f / archWebs) * i;
-                    Point nextPoint = new Point(x, radius - (int)Math.Sqrt((radius * radius) - (x * x)));
+                    int x = (int)(scale * ((16.25f / (archWebs + 1) * i) + 1.75f));
+                    Point nextPoint = new Point(x, -((int)Math.Sqrt((radius * radius) - Math.Pow(x - xOriginal, 2)) - (int)yOriginal));
                     members.Add(new Member(lastPoint, nextPoint));
                     lastPoint = nextPoint;
                 }
                 members.Add(new Member(lastPoint, new Point(bitBox.Width - (int)(scale * 1.75f), bitBox.Height)));
             }
+            int currentLength = members.Count();
+            for (int i = 0; i < currentLength; i++)
+            {
+                Member member = members[i];
+                members.Add(new Member(member.Start.X, member.Start.Y - supportHeight, member.End.X, member.End.Y - supportHeight));
+            }
+            members = createTrussMembers(members);
 
             foreach (var member in members)
             {
@@ -79,6 +89,25 @@ namespace TrussMe
             bitBox.Image = map;
         }
 
+        List<Member> createTrussMembers(List<Member> members)
+        {
+            for (int i = 0; i < members.Count/4; i++)
+            {
+                members.Add(new Member(members[i].Start, members[members.Count/2].Start));
+            }
+            for (int i = 0; i < members.Count / 2; i++)
+            {
+                members.Add(new Member(members[members.Count / 2].Start, members[i].Start));
+            }
+            if(members.Count > 1)
+            {
+                members.Add(new Member(members[members.Count / 4].Start, members[members.Count / 4].Start));
+            }
+            return members;
+        }
+
+        //
+        //ID10T
 
         private void archTrussBox_SelectedIndexChanged(object sender, EventArgs e)
         {

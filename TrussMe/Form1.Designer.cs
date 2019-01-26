@@ -328,9 +328,9 @@
             // 
             // bitBox
             // 
-            this.bitBox.Location = new System.Drawing.Point(12, 12);
+            this.bitBox.Location = new System.Drawing.Point(49, 12);
             this.bitBox.Name = "bitBox";
-            this.bitBox.Size = new System.Drawing.Size(1434, 459);
+            this.bitBox.Size = new System.Drawing.Size(1236, 459);
             this.bitBox.TabIndex = 9;
             this.bitBox.TabStop = false;
             // 
@@ -338,7 +338,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1458, 915);
+            this.ClientSize = new System.Drawing.Size(1370, 749);
             this.Controls.Add(this.bitBox);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
