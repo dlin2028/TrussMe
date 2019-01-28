@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static TrussMe.TrussCreator;
 
 namespace TrussMe
 {
@@ -28,7 +29,6 @@ namespace TrussMe
             DrawBridge();
         }
 
-        enum TrussType { Howe, Howe2, Warren, Pratt, Pratt2, Childs, Childs2 };
 
 
         void DrawBridge()
@@ -37,49 +37,20 @@ namespace TrussMe
             //width of screen is 16.25 + 1.75 * 2 inches
             float scale = bitBox.Width / 19.75f;
 
-            int supportWidth = (int)(1.75f * scale);
-            int supportHeight = (int)(0.5f * scale);
+            float supportWidth = 1.75f * scale;
+            float supportHeight = 0.5f * scale;
             gfx.Clear(Color.AliceBlue);
-            gfx.FillRectangle(Brushes.DarkGray, new Rectangle(0, bitBox.Height - supportHeight, supportWidth, supportHeight));
-            gfx.FillRectangle(Brushes.DarkGray, new Rectangle(bitBox.Width - supportWidth, bitBox.Height - supportHeight, supportWidth, supportHeight));
+            gfx.FillRectangle(Brushes.DarkGray, new Rectangle(0, bitBox.Height - (int)supportHeight, (int)supportWidth, (int)supportHeight));
+            gfx.FillRectangle(Brushes.DarkGray, new Rectangle(bitBox.Width - (int)supportWidth, bitBox.Height - (int)supportHeight, (int)supportWidth, (int)supportHeight));
 
             for (int i = 0; i < 20; i++)
             {
                 gfx.FillRectangle(Brushes.Black, new Rectangle((int)(scale * i), bitBox.Height - 20, 5, 20));
             }
 
-
-            TrussType archType = (TrussType)archTrussBox.SelectedIndex;
-            float archHeight = (float)archHeightBox.Value;
-            int archWebs = (int)archWebBox.Value;
-
             List<Member> members = new List<Member>();
-            if (archType == TrussType.Howe)
-            {
-                float startX = supportWidth;
-                float startY = bitBox.Height;
+            members.AddRange(createArch((float)archHeightBox.Value, scale, supportWidth, supportHeight));
 
-                float xOriginal = bitBox.Width / 2;
-                float yOriginal = (int)(-(scale * archHeight) + (xOriginal * xOriginal) / (archHeight * scale) / 2);
-                int radius = (int)Math.Sqrt(Math.Pow(startX - xOriginal, 2) + Math.Pow(startY - yOriginal, 2));
-
-                Point lastPoint = new Point((int)(scale * 1.75f), bitBox.Height);
-                for (int i = 1; i < archWebs + 1; i++)
-                {
-                    int x = (int)(scale * ((16.25f / (archWebs + 1) * i) + 1.75f));
-                    Point nextPoint = new Point(x, -((int)Math.Sqrt((radius * radius) - Math.Pow(x - xOriginal, 2)) - (int)yOriginal));
-                    members.Add(new Member(lastPoint, nextPoint));
-                    lastPoint = nextPoint;
-                }
-                members.Add(new Member(lastPoint, new Point(bitBox.Width - (int)(scale * 1.75f), bitBox.Height)));
-            }
-            int currentLength = members.Count();
-            for (int i = 0; i < currentLength; i++)
-            {
-                Member member = members[i];
-                members.Add(new Member(member.Start.X, member.Start.Y - supportHeight, member.End.X, member.End.Y - supportHeight));
-            }
-            members = createTrussMembers(members);
 
             foreach (var member in members)
             {
@@ -89,25 +60,54 @@ namespace TrussMe
             bitBox.Image = map;
         }
 
-        List<Member> createTrussMembers(List<Member> members)
+        private List<Member> createArch(float height, float scale, float supportWidth, float supportHeight)
         {
-            for (int i = 0; i < members.Count/4; i++)
-            {
-                members.Add(new Member(members[i].Start, members[members.Count/2].Start));
-            }
-            for (int i = 0; i < members.Count / 2; i++)
-            {
-                members.Add(new Member(members[members.Count / 2].Start, members[i].Start));
-            }
-            if(members.Count > 1)
-            {
-                members.Add(new Member(members[members.Count / 4].Start, members[members.Count / 4].Start));
-            }
-            return members;
-        }
+            TrussType archType = (TrussType)archTrussBox.SelectedIndex;
+            int archWebs = (int)archWebBox.Value;
 
-        //
-        //ID10T
+            List<Member> bottomArch = new List<Member>();
+
+            float startX = supportWidth;
+            float startY = bitBox.Height;
+
+            float xOriginal = bitBox.Width / 2;
+            float yOriginal = (int)(-(scale * height) + (xOriginal * xOriginal) / (height * scale) / 2);
+
+            float radius = (float)Math.Sqrt(Math.Pow(startX - xOriginal, 2) + Math.Pow(startY - yOriginal, 2));
+            float chordLength = 2 * (bitBox.Width - supportWidth);
+            float vertexAngle = (float)Math.Asin(chordLength / (2 * radius));
+
+            //measured in radians
+            // pi/2 - the angle of the chord start (sin-1[c/(2r)])
+            float currentAngle = (1/2f) * (float)Math.PI - vertexAngle;
+            ;
+
+            Point lastPoint = new Point((int)(scale * 1.75f), bitBox.Height);
+            for (int i = 1; i < archWebs + 1; i++)
+            {
+                //int x = (int)(scale * ((16.25f / (archWebs + 1) * i) + 1.75f));
+                //Point nextPoint = new Point(x, -((int)Math.Sqrt((radius * radius) - Math.Pow(x - xOriginal, 2)) - (int)yOriginal));
+
+                currentAngle += vertexAngle / (float)(archWebs + 1);
+                Point nextPoint = new Point((int)(-radius * Math.Cos(currentAngle) + xOriginal), (int)(-radius * Math.Sin(currentAngle) + yOriginal));
+
+                bottomArch.Add(new Member(lastPoint, nextPoint));
+                lastPoint = nextPoint;
+            }
+            bottomArch.Add(new Member(lastPoint, new Point(bitBox.Width - (int)(scale * 1.75f), bitBox.Height)));
+
+            int currentLength = bottomArch.Count();
+
+            List<Member> topArch = new List<Member>();
+            for (int i = 0; i < currentLength; i++)
+            {
+                Member member = bottomArch[i];
+                topArch.Add(new Member(member.Start.X, member.Start.Y - (int)supportHeight, member.End.X, (int)(member.End.Y - supportHeight)));
+            }
+
+
+            return TrussCreator.CreateTruss(topArch, bottomArch, archType, (int)archExtraBox.Value);
+        }
 
         private void archTrussBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -120,6 +120,11 @@ namespace TrussMe
         }
 
         private void archWebBox_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void archExtraBox_ValueChanged(object sender, EventArgs e)
         {
             DrawBridge();
         }

@@ -32,5 +32,16 @@ namespace TrussMe
             Start = start;
             End = end;
         }
+
+        public List<Member> AddBisector(Point end)
+        {
+            Point middle = new Point((Start.X + End.X)/2, (Start.Y + End.Y) / 2);
+            return new List<Member>()
+            {
+                new Member(Start, middle),
+                new Member(middle, end),
+                new Member(middle, End)
+            };
+        }
     }
 }
