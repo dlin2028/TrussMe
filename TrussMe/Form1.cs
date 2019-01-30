@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -50,7 +51,8 @@ namespace TrussMe
 
             List<Member> members = new List<Member>();
             members.AddRange(createArch((float)archHeightBox.Value, scale, supportWidth, supportHeight));
-
+            members.AddRange(createDeck(bitBox.Height - ((float)archHeightBox.Value + (float)deckHeightBox.Value - 0.5f) * scale, scale, supportWidth, supportHeight));
+            members.AddRange(createSpandrels(bitBox.Height - ((float)archHeightBox.Value + (float)deckHeightBox.Value - 0.5f) * scale, (float)archHeightBox.Value, scale, supportWidth, supportHeight));
 
             foreach (var member in members)
             {
@@ -58,6 +60,147 @@ namespace TrussMe
             }
 
             bitBox.Image = map;
+
+            
+        }
+
+        struct Joint
+        {
+            public float X;
+            public float Y;
+
+            public Joint(float x, float y)
+            {
+                X = x;
+                Y = y;
+            }
+        }
+
+        private void saveFile(List<Member> members, float scale)
+        {
+            List<string> lines = File.ReadAllLines(@"C:\Users\Bobbapus\Desktop\dum.txt").ToList();
+            List<Point> uniqueJoints = new List<Point>();
+            foreach (var member in members)
+            {
+                Point startPoint = new Point(RoundToNearestEith(member.Start.X/ scale), RoundToNearestEith(member.Start.X / scale));
+                Point endPoint = new Point(RoundToNearestEith(member.End.X / scale), RoundToNearestEith(member.End.X / scale));
+                if (!uniqueJoints.Contains(startPoint))
+                {
+                    uniqueJoints.Add(startPoint);
+                }
+                if(!uniqueJoints.Contains(endPoint))
+                {
+                    uniqueJoints.Add(endPoint);
+                }
+            }
+
+            List<string> jointLines = new List<string>();
+            for (int i = 0; i < uniqueJoints.Count; i++)
+            {
+                jointLines.Add(i.ToString() + " " + joint)
+            }
+        }
+        public decimal RoundToNearestEith(this float value)
+        {
+            return Math.Round((decimal)value * 8) / 8;
+        }
+
+        private List<Member> createSpandrels(float deckHeight, float archHeight, float scale, float supportWidth, float supportHeight)
+        {
+            //deck part
+            List<Member> bottomDeck = new List<Member>();
+
+            int deckWebs = (int)spandrelWebBox.Value;
+            Point lastPoint = new Point((int)(scale * 1.75f), (int)(deckHeight));
+            for (int i = 1; i < deckWebs + 1; i++)
+            {
+                int x = (int)(scale * ((16.25f / (deckWebs + 1) * i) + 1.75f));
+                Point nextPoint = new Point(x, (int)deckHeight);
+
+                bottomDeck.Add(new Member(lastPoint, nextPoint));
+                lastPoint = nextPoint;
+            }
+            bottomDeck.Add(new Member(lastPoint, new Point(bitBox.Width - (int)(scale * 1.75f), (int)deckHeight)));
+
+            List<Member> topDeck = new List<Member>();
+            int currentLength = bottomDeck.Count();
+            for (int i = 0; i < currentLength; i++)
+            {
+                Member member = bottomDeck[i];
+                topDeck.Add(new Member(member.Start.X, member.Start.Y - (int)supportHeight, member.End.X, (int)(member.End.Y - supportHeight)));
+            }
+            //arch parts
+
+            TrussType archType = (TrussType)archTrussBox.SelectedIndex;
+            int archWebs = (int)spandrelWebBox.Value;
+
+            List<Member> bottomArch = new List<Member>();
+
+            float startX = supportWidth;
+            float startY = bitBox.Height;
+
+            float xOriginal = bitBox.Width / 2;
+            float yOriginal = (int)(-(scale * archHeight) + (xOriginal * xOriginal) / (archHeight * scale) / 2);
+
+            float radius = (float)Math.Sqrt(Math.Pow(startX - xOriginal, 2) + Math.Pow(startY - yOriginal, 2));
+            float chordLength = (bitBox.Width - supportWidth * 2);
+            float vertexAngle = 2 * (float)Math.Asin(chordLength / (2 * radius));
+
+            //measured in radians
+            // pi/2 - the angle of the chord start (sin-1[c/(2r)])
+            float currentAngle = (1 / 2f) * (float)Math.PI - vertexAngle / 2;
+            ;
+
+            lastPoint = new Point((int)(scale * 1.75f), bitBox.Height);
+            for (int i = 1; i < archWebs + 1; i++)
+            {
+                //int x = (int)(scale * ((16.25f / (archWebs + 1) * i) + 1.75f));
+                //Point nextPoint = new Point(x, -((int)Math.Sqrt((radius * radius) - Math.Pow(x - xOriginal, 2)) - (int)yOriginal));
+
+                currentAngle += vertexAngle / (float)(archWebs + 1);
+                Point nextPoint = new Point((int)(-radius * Math.Cos(currentAngle) + xOriginal), (int)(-radius * Math.Sin(currentAngle) + yOriginal));
+
+                bottomArch.Add(new Member(lastPoint, nextPoint));
+                lastPoint = nextPoint;
+            }
+            bottomArch.Add(new Member(lastPoint, new Point(bitBox.Width - (int)(scale * 1.75f), bitBox.Height)));
+
+            currentLength = bottomArch.Count();
+
+            List<Member> topArch = new List<Member>();
+            for (int i = 0; i < currentLength; i++)
+            {
+                Member member = bottomArch[i];
+                topArch.Add(new Member(member.Start.X, member.Start.Y - (int)supportHeight, member.End.X, (int)(member.End.Y - supportHeight)));
+            }
+
+            return TrussCreator.CreateTruss(bottomDeck, topArch, (TrussType)spandrelTrussBox.SelectedIndex, 0);
+        }
+
+        private List<Member> createDeck(float height, float scale, float supportWidth, float supportHeight)
+        {
+            List<Member> bottomMembers = new List<Member>();
+
+            int deckWebs = (int)deckWebBox.Value;
+            Point lastPoint = new Point((int)(scale * 1.75f),(int)(height));
+            for (int i = 1; i < deckWebs + 1; i++)
+            {
+                int x = (int)(scale * ((16.25f / (deckWebs + 1) * i) + 1.75f));
+                Point nextPoint = new Point(x, (int)height);
+
+                bottomMembers.Add(new Member(lastPoint, nextPoint));
+                lastPoint = nextPoint;
+            }
+            bottomMembers.Add(new Member(lastPoint, new Point(bitBox.Width - (int)(scale * 1.75f), (int)height)));
+
+            List<Member> topDeck = new List<Member>();
+            int currentLength = bottomMembers.Count();
+            for (int i = 0; i < currentLength; i++)
+            {
+                Member member = bottomMembers[i];
+                topDeck.Add(new Member(member.Start.X, member.Start.Y - (int)supportHeight, member.End.X, (int)(member.End.Y - supportHeight)));
+            }
+            return CreateTruss(bottomMembers, topDeck, (TrussType)deckTrussBox.SelectedIndex, (int)extraDeckMembers.Value);
         }
 
         private List<Member> createArch(float height, float scale, float supportWidth, float supportHeight)
@@ -74,12 +217,12 @@ namespace TrussMe
             float yOriginal = (int)(-(scale * height) + (xOriginal * xOriginal) / (height * scale) / 2);
 
             float radius = (float)Math.Sqrt(Math.Pow(startX - xOriginal, 2) + Math.Pow(startY - yOriginal, 2));
-            float chordLength = 2 * (bitBox.Width - supportWidth);
-            float vertexAngle = (float)Math.Asin(chordLength / (2 * radius));
+            float chordLength = (bitBox.Width - supportWidth * 2);
+            float vertexAngle = 2 * (float)Math.Asin(chordLength / (2 * radius));
 
             //measured in radians
             // pi/2 - the angle of the chord start (sin-1[c/(2r)])
-            float currentAngle = (1/2f) * (float)Math.PI - vertexAngle;
+            float currentAngle = (1/2f) * (float)Math.PI - vertexAngle/2;
             ;
 
             Point lastPoint = new Point((int)(scale * 1.75f), bitBox.Height);
@@ -125,6 +268,51 @@ namespace TrussMe
         }
 
         private void archExtraBox_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void groupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void deckHeightBox_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void deckTrussBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void deckWebBox_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void thiccBox_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void extraDeckMembers_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void spandrelTrussBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void spandrelWebBox_ValueChanged(object sender, EventArgs e)
+        {
+            DrawBridge();
+        }
+
+        private void spandrelExtraMembers_ValueChanged(object sender, EventArgs e)
         {
             DrawBridge();
         }
