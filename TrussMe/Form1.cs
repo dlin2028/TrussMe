@@ -78,19 +78,19 @@ namespace TrussMe
 
         private void saveFile(List<Member> members, float scale)
         {
-            List<string> lines = File.ReadAllLines(@"C:\Users\David\Desktop\dum.txt").ToList();
+            List<string> lines = File.ReadAllLines(@"C:\Users\Bobbapus\Desktop\dum.txt").ToList();
             List<Joint> uniqueJoints = new List<Joint>();
             List<Member> uniqueMembers = new List<Member>();
             foreach (var member in members)
             {
-                Joint startPoint = new Joint(RoundToNearestEith(member.Start.X/ scale), RoundToNearestEith(member.Start.X / scale));
-                Joint endPoint = new Joint(RoundToNearestEith(member.End.X / scale), RoundToNearestEith(member.End.X / scale));
-                
-                if (!uniqueJoints.Contains(startPoint))
+                Joint startPoint = new Joint(RoundToNearestEith(member.Start.X/ scale), RoundToNearestEith(member.Start.Y / scale));
+                Joint endPoint = new Joint(RoundToNearestEith(member.End.X / scale), RoundToNearestEith(member.End.Y / scale));
+
+                if (uniqueJoints.Where(x => startPoint.X == x.X && startPoint.Y == x.Y).Count() == 0)
                 {
                     uniqueJoints.Add(startPoint);
                 }
-                if(!uniqueJoints.Contains(endPoint))
+                if (uniqueJoints.Where(x => endPoint.X == x.X && endPoint.Y == x.Y).Count() == 0)
                 {
                     uniqueJoints.Add(endPoint);
                 }
@@ -100,15 +100,15 @@ namespace TrussMe
             for (int i = 0; i < uniqueJoints.Count; i++)
             {
                 jointLines.Add(i.ToString() + " "
-                    + uniqueJoints[i].X.ToString("X.000000") + " "
-                    + uniqueJoints[i].Y.ToString("X.000000") + " "
+                    + uniqueJoints[i].X.ToString("0.000000") + " "
+                    + uniqueJoints[i].Y.ToString("0.000000") + " "
                     + "4.000000" + " 0 0 0 0 0 0 0 0");
                 //z position is 4
 
 
                 jointLines.Add(i.ToString() + " "
-                    + uniqueJoints[i].X.ToString("X.000000") + " "
-                    + uniqueJoints[i].Y.ToString("X.000000") + " "
+                    + uniqueJoints[i].X.ToString("0.000000") + " "
+                    + uniqueJoints[i].Y.ToString("0.000000") + " "
                     + "6.000000" + " 0 0 0 0 0 0 0 0");
                 //z position is 6
             }
@@ -132,7 +132,7 @@ namespace TrussMe
             lines.InsertRange(3, memberLines);
             lines.InsertRange(3, jointLines);
 
-            File.WriteAllLines(@"C:\Users\David\Desktop\smrt.txt", lines);
+            File.WriteAllLines(@"C:\Users\Bobbapus\Desktop\smrt.txt", lines);
         }
         public decimal RoundToNearestEith(float value)
         {
