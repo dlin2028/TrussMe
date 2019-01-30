@@ -61,15 +61,15 @@ namespace TrussMe
 
             bitBox.Image = map;
 
-            
+            saveFile(members, scale);
         }
 
         struct Joint
         {
-            public float X;
-            public float Y;
+            public decimal X;
+            public decimal Y;
 
-            public Joint(float x, float y)
+            public Joint(decimal x, decimal y)
             {
                 X = x;
                 Y = y;
@@ -78,12 +78,14 @@ namespace TrussMe
 
         private void saveFile(List<Member> members, float scale)
         {
-            List<string> lines = File.ReadAllLines(@"C:\Users\Bobbapus\Desktop\dum.txt").ToList();
-            List<Point> uniqueJoints = new List<Point>();
+            List<string> lines = File.ReadAllLines(@"C:\Users\David\Desktop\dum.txt").ToList();
+            List<Joint> uniqueJoints = new List<Joint>();
+            List<Member> uniqueMembers = new List<Member>();
             foreach (var member in members)
             {
-                Point startPoint = new Point(RoundToNearestEith(member.Start.X/ scale), RoundToNearestEith(member.Start.X / scale));
-                Point endPoint = new Point(RoundToNearestEith(member.End.X / scale), RoundToNearestEith(member.End.X / scale));
+                Joint startPoint = new Joint(RoundToNearestEith(member.Start.X/ scale), RoundToNearestEith(member.Start.X / scale));
+                Joint endPoint = new Joint(RoundToNearestEith(member.End.X / scale), RoundToNearestEith(member.End.X / scale));
+                
                 if (!uniqueJoints.Contains(startPoint))
                 {
                     uniqueJoints.Add(startPoint);
@@ -97,10 +99,42 @@ namespace TrussMe
             List<string> jointLines = new List<string>();
             for (int i = 0; i < uniqueJoints.Count; i++)
             {
-                jointLines.Add(i.ToString() + " " + joint)
+                jointLines.Add(i.ToString() + " "
+                    + uniqueJoints[i].X.ToString("X.000000") + " "
+                    + uniqueJoints[i].Y.ToString("X.000000") + " "
+                    + "4.000000" + " 0 0 0 0 0 0 0 0");
+                //z position is 4
+
+
+                jointLines.Add(i.ToString() + " "
+                    + uniqueJoints[i].X.ToString("X.000000") + " "
+                    + uniqueJoints[i].Y.ToString("X.000000") + " "
+                    + "6.000000" + " 0 0 0 0 0 0 0 0");
+                //z position is 6
             }
+
+            List<string> memberLines = new List<string>();
+            for (int i = 0; i < members.Count; i++)
+            {
+                int start = uniqueJoints.IndexOf(
+                    uniqueJoints.FirstOrDefault(joint =>
+                        joint.X == RoundToNearestEith(members[i].Start.X/scale)
+                        && joint.Y == RoundToNearestEith(members[i].Start.Y/scale)));
+                int end = uniqueJoints.IndexOf(
+                    uniqueJoints.FirstOrDefault(joint =>
+                        joint.X == RoundToNearestEith(members[i].End.X / scale)
+                        && joint.Y == RoundToNearestEith( members[i].End.Y /scale)));
+
+                string length = Math.Sqrt(start * start + end * end).ToString("X.000000");
+
+                memberLines.Add(i.ToString() + " " + start + " " + end + " " + length + " " + length + " 0 0 0.000000 0.000000 2 4 0 0.000000 1 1 1 1 1 0.741200 0.651000");
+            }
+            lines.InsertRange(3, memberLines);
+            lines.InsertRange(3, jointLines);
+
+            File.WriteAllLines(@"C:\Users\David\Desktop\smrt.txt", lines);
         }
-        public decimal RoundToNearestEith(this float value)
+        public decimal RoundToNearestEith(float value)
         {
             return Math.Round((decimal)value * 8) / 8;
         }
